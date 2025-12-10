@@ -1,15 +1,11 @@
-import logging
 import re
 
-import requests
+from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
-from scrapers.rental_offer import RentalOffer
-import requests
-from bs4 import BeautifulSoup
 
 
 class ScraperRealcity(ScraperBase):
@@ -31,19 +27,13 @@ class ScraperRealcity(ScraperBase):
         Disposition.FLAT_OTHERS: ("%22atyp%22", "%22disp_nospec%22"), # atyp, unknown
     }
 
-
-    def build_response(self) -> requests.Response:
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
         url = "https://www.realcity.cz/pronajem-bytu/brno-mesto-68/?sp=%7B%22locality%22%3A%5B68%5D%2C%22transactionTypes%22%3A%5B%22rent%22%5D%2C%22propertyTypes%22%3A%5B%7B%22propertyType%22%3A%22flat%22%2C%22options%22%3A%7B%22disposition%22%3A%5B"
         url += "%2C".join(self.get_dispositions_data())
         url += "%5D%7D%7D%5D%7D"
 
-        logging.debug("REALCITY request: %s", url)
-
-        return requests.get(url, headers=self.headers)
-
-    def get_latest_offers(self) -> list[RentalOffer]:
-        response = self.build_response()
-        soup = BeautifulSoup(response.text, 'html.parser')
+        async with session.get(url) as response:
+            soup = BeautifulSoup(await response.text(), 'html.parser')
 
         items: list[RentalOffer] = []
 

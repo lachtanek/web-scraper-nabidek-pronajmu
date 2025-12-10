@@ -1,7 +1,9 @@
+import asyncio
 import logging
 import traceback
 
-from config import *
+from aiohttp import ClientSession
+
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
@@ -14,6 +16,7 @@ from scrapers.scraper_remax import ScraperRemax
 from scrapers.scraper_sreality import ScraperSreality
 from scrapers.scraper_ulov_domov import ScraperUlovDomov
 from scrapers.scraper_bezrealitky import ScraperBezrealitky
+from utils import flatten
 
 
 def create_scrapers(dispositions: Disposition) -> list[ScraperBase]:
@@ -22,7 +25,7 @@ def create_scrapers(dispositions: Disposition) -> list[ScraperBase]:
         ScraperEuroBydleni(dispositions),
         ScraperIdnesReality(dispositions),
         ScraperRealcity(dispositions),
-        #ScraperRealingo(dispositions),
+        # ScraperRealingo(dispositions),
         ScraperRemax(dispositions),
         ScraperSreality(dispositions),
         ScraperUlovDomov(dispositions),
@@ -30,19 +33,26 @@ def create_scrapers(dispositions: Disposition) -> list[ScraperBase]:
     ]
 
 
-def fetch_latest_offers(scrapers: list[ScraperBase]) -> list[RentalOffer]:
+async def _fetch_offers(
+    session: ClientSession, scraper: ScraperBase
+) -> list[RentalOffer]:
+    try:
+        return await scraper.get_latest_offers(session)
+    except Exception:
+        logging.error(traceback.format_exc())
+
+
+async def fetch_latest_offers(scrapers: list[ScraperBase]) -> list[RentalOffer]:
     """Získá všechny nejnovější nabídky z dostupných serverů
 
     Returns:
         list[RentalOffer]: Seznam nabídek
     """
 
-    offers: list[RentalOffer] = []
-    for scraper in scrapers:
-        try:
-            for offer in scraper.get_latest_offers():
-                offers.append(offer)
-        except Exception:
-            logging.error(traceback.format_exc())
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+    headers = {"User-Agent": user_agent}
 
-    return offers
+    async with ClientSession(headers=headers) as session:
+        offers = await asyncio.gather(*[_fetch_offers(session, s) for s in scrapers])
+
+    return list(flatten(offers))

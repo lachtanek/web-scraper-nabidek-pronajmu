@@ -52,7 +52,7 @@ async def deduplicate_offers(offers: list[RentalOffer]) -> list[RentalOffer]:
 def _filter_offer(offer: RentalOffer) -> bool:
     try:
         price = int(offer.price)
-    except Exception:
+    except (TypeError, ValueError):
         return True
 
     if config.min_price and price < config.min_price:

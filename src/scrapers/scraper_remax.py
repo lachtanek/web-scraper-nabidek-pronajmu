@@ -1,16 +1,12 @@
-import logging
 import re
 from urllib.parse import urljoin
 
-import requests
+from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
-from scrapers.rental_offer import RentalOffer
-from urllib.parse import urljoin
-from bs4 import BeautifulSoup
 
 
 class ScraperRemax(ScraperBase):
@@ -43,19 +39,13 @@ class ScraperRemax(ScraperBase):
         ),
     }
 
-
-    def build_response(self) -> requests.Response:
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
         url = self.base_url + "?regions%5B116%5D%5B3702%5D=on&sale=2"
         url += "".join(self.get_dispositions_data())
         url += "&order_by_published_date=0"
 
-        logging.debug("Remax request: %s", url)
-
-        return requests.get(url, headers=self.headers)
-
-    def get_latest_offers(self) -> list[RentalOffer]:
-        response = self.build_response()
-        soup = BeautifulSoup(response.text, 'html.parser')
+        async with session.get(url) as response:
+            soup = BeautifulSoup(await response.text(), 'html.parser')
 
         items: list[RentalOffer] = []
 

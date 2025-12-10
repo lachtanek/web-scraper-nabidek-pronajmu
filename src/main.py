@@ -31,8 +31,8 @@ scrapers = create_scrapers(config.dispositions)
 async def on_ready():
     global channel, storage
 
-    dev_channel = client.get_channel(config.discord.dev_channel)
-    channel = client.get_channel(config.discord.offers_channel)
+    dev_channel = client.get_channel(config.discord_dev_channel)
+    channel = client.get_channel(config.discord_offers_channel)
     storage = OffersStorage(config.found_offers_file)
 
     if not config.debug:
@@ -52,7 +52,7 @@ async def on_ready():
 async def process_latest_offers():
     logging.info("Fetching offers")
 
-    all_offers = fetch_latest_offers(scrapers)
+    all_offers = await fetch_latest_offers(scrapers)
     new_offers = [o for o in all_offers if not storage.contains(o)]
     first_time = storage.first_time
     storage.save_offers(new_offers)
@@ -165,4 +165,4 @@ if __name__ == "__main__":
 
     logging.debug("Running in debug mode")
 
-    client.run(config.discord.token, log_level=logging.INFO)
+    client.run(config.discord_token, log_level=logging.INFO)

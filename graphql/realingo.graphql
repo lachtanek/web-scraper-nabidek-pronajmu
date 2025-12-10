@@ -1,0 +1,180 @@
+query SearchOffer(
+  $purpose: OfferPurpose
+  $property: PropertyType
+  $saved: Boolean
+  $categories: [OfferCategory!]
+  $area: RangeInput
+  $plotArea: RangeInput
+  $price: RangeInput
+  $bounds: GpsBoundsInput
+  $address: String
+  $transportType: TransportType
+  $toleration: Float
+  $buildingTypes: [BuildingType!]
+  $buildingStatuses: [BuildingStatus!]
+  $buildingPositions: [BuildingPosition!]
+  $houseTypes: [HouseType!]
+  $floor: RangeInput
+  $ownershipStatuses: [OwnershipStatus!]
+  $furnitureStatuses: [FurnitureStatus!]
+  $maxAge: Int
+  $contactType: ContactType
+  $geometry: GeoJSONGeometry
+  $sort: OfferSort = NEWEST
+  $first: Int = 20
+  $skip: Int = 0
+) {
+  addressGeometry(
+    address: $address
+    geometry: $geometry
+    toleration: $toleration
+    transportType: $transportType
+  ) {
+    geometry
+    mask
+  }
+  searchOffer(
+    filter: {
+      purpose: $purpose
+      property: $property
+      saved: $saved
+      address: $address
+      transportType: $transportType
+      toleration: $toleration
+      categories: $categories
+      area: $area
+      plotArea: $plotArea
+      price: $price
+      bounds: $bounds
+      buildingTypes: $buildingTypes
+      buildingStatuses: $buildingStatuses
+      buildingPositions: $buildingPositions
+      houseTypes: $houseTypes
+      floor: $floor
+      ownershipStatuses: $ownershipStatuses
+      furnitureStatuses: $furnitureStatuses
+      maxAge: $maxAge
+      contactType: $contactType
+      geometry: $geometry
+    }
+    sort: $sort
+    first: $first
+    skip: $skip
+    save: true
+  ) {
+    location {
+      id
+      type
+      url
+      name
+      neighbours {
+        id
+        type
+        url
+        name
+      }
+      breadcrumbs {
+        url
+        name
+      }
+      relatedSearch {
+        ...SearchParametersAttributes
+      }
+      center
+    }
+    items {
+      ...SearchOfferAttributes
+    }
+    total
+  }
+}
+
+fragment FilterAttributes on OfferFilter {
+  purpose
+  property
+  categories
+  address
+  location {
+    name
+  }
+  toleration
+  transportType
+  bounds {
+    northEast {
+      latitude
+      longitude
+    }
+    southWest {
+      latitude
+      longitude
+    }
+  }
+  saved
+  geometry
+  area {
+    from
+    to
+  }
+  plotArea {
+    from
+    to
+  }
+  price {
+    from
+    to
+  }
+  buildingTypes
+  buildingStatuses
+  buildingPositions
+  houseTypes
+  floor {
+    from
+    to
+  }
+  ownershipStatuses
+  furnitureStatuses
+  maxAge
+  contactType
+}
+
+fragment SearchParametersAttributes on SearchParameters {
+  filter {
+    ...FilterAttributes
+  }
+  page
+  priceMap
+  sort
+}
+
+fragment SearchOfferAttributes on Offer {
+  id
+  url
+  purpose
+  property
+  visited
+  liked
+  reserved
+  createdAt
+  category
+  purpose
+  property
+  price {
+    total
+    canonical
+    currency
+  }
+  area {
+    main
+    plot
+  }
+  photos {
+    main
+  }
+  location {
+    address
+    addressUrl
+    locationPrecision
+    latitude
+    longitude
+  }
+}

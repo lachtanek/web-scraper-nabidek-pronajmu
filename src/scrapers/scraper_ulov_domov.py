@@ -1,13 +1,10 @@
-import json
-import logging
+from typing import Any
 
-import requests
+from aiohttp import ClientSession
 
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
-from scrapers.rental_offer import RentalOffer
-import requests
 
 
 class ScraperUlovDomov(ScraperBase):
@@ -59,8 +56,8 @@ class ScraperUlovDomov(ScraperBase):
             "5_and_more": "5 a více"
         }.get(id, "")
 
-    def build_response(self) -> requests.Response:
-        json_request = {
+    def _get_data(self) -> dict[str, Any]:
+        return {
             "acreage_from": "",
             "acreage_to": "",
             "added_before": "",
@@ -89,15 +86,12 @@ class ScraperUlovDomov(ScraperBase):
             "sticker": None
         }
 
-        logging.debug("UlovDomov request: %s", json.dumps(json_request))
-
-        return requests.post(self.base_url, headers=self.headers, json=json_request)
-
-    def get_latest_offers(self) -> list[RentalOffer]:
-        response = self.build_response().json()
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
+        async with session.post(self.base_url, json=self._get_data()) as response:
+            data = await response.json()
 
         items: list[RentalOffer] = []
-        for offer in response["offers"]:
+        for offer in data["offers"]:
             location = offer["village"]["label"]
             if offer["street"] is not None:
                 location = offer["street"]["label"] + ", " + location

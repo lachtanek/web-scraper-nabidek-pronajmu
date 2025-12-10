@@ -1,16 +1,11 @@
-import logging
 from time import time
 from urllib.parse import urljoin
 
-import requests
+from aiohttp import ClientSession
 
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
-from scrapers.rental_offer import RentalOffer
-from time import time
-import requests
-from urllib.parse import urljoin
 
 
 class ScraperSreality(ScraperBase):
@@ -106,22 +101,18 @@ class ScraperSreality(ScraperBase):
             "/" + offer["seo"]["locality"] +
             "/" + str(offer["hash_id"]))
 
-    def build_response(self) -> requests.Response:
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
         url = self.base_url + "/api/cs/v2/estates?category_main_cb=1&category_sub_cb="
         url += "|".join(self.get_dispositions_data())
         url += "&category_type_cb=2&locality_district_id=72&locality_region_id=14&per_page=20"
         url += "&tms=" + str(int(time()))
 
-        logging.debug("Sreality request: %s", url)
-
-        return requests.get(url, headers=self.headers)
-
-    def get_latest_offers(self) -> list[RentalOffer]:
-        response = self.build_response().json()
+        async with session.get(url) as response:
+            data = await response.json()
 
         items: list[RentalOffer] = []
 
-        for item in response["_embedded"]["estates"]:
+        for item in data["_embedded"]["estates"]:
             # Ignorovat "tip" nabídky, které úplně neodpovídají filtrům a mění se s každým vyhledáváním
             if item["region_tip"] > 0:
                 continue

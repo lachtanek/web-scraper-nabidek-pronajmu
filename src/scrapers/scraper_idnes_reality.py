@@ -1,15 +1,11 @@
-import logging
 import re
 
-import requests
+from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
-from scrapers.rental_offer import RentalOffer
-import requests
-from bs4 import BeautifulSoup
 
 
 class ScraperIdnesReality(ScraperBase):
@@ -35,18 +31,12 @@ class ScraperIdnesReality(ScraperBase):
         Disposition.FLAT_OTHERS: "s-qc%5BsubtypeFlat%5D%5B%5D=atypical", # atyp
     }
 
-
-    def build_response(self) -> requests.Response:
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
         url = "https://reality.idnes.cz/s/pronajem/byty/brno-mesto/?"
         url += "&".join(self.get_dispositions_data())
 
-        logging.debug("iDNES reality request: %s", url)
-
-        return requests.get(url, headers=self.headers)
-
-    def get_latest_offers(self) -> list[RentalOffer]:
-        response = self.build_response()
-        soup = BeautifulSoup(response.text, 'html.parser')
+        async with session.get(url) as response:
+            soup = BeautifulSoup(await response.text(), 'html.parser')
 
         items: list[RentalOffer] = []
 

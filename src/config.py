@@ -2,19 +2,19 @@ import functools
 import operator
 import os
 from pathlib import Path
+from typing import Annotated
 
 import environ
-from dotenv import load_dotenv
+from pydantic import BeforeValidator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from disposition import Disposition
 
-load_dotenv(".env")
-
 app_env = os.getenv("APP_ENV")
 if app_env:
-    load_dotenv(".env." + app_env, override=True)
-
-load_dotenv(".env.local", override=True)
+    env_files = (".env", ".env." + app_env, ".env.local")
+else:
+    env_files = (".env", ".env.local")
 
 _str_to_disposition_map = {
     "1+kk": Disposition.FLAT_1KK,
@@ -26,35 +26,34 @@ _str_to_disposition_map = {
     "4+kk": Disposition.FLAT_4KK,
     "4+1": Disposition.FLAT_4,
     "5++": Disposition.FLAT_5_UP,
-    "others": Disposition.FLAT_OTHERS
+    "others": Disposition.FLAT_OTHERS,
 }
 
-def dispositions_converter(raw_disps: str):
-    return functools.reduce(operator.or_, map(lambda d: _str_to_disposition_map[d], raw_disps.split(",")), Disposition.NONE)
+
+def dispositions_converter(raw_disps: str) -> Disposition:
+    return functools.reduce(
+        operator.or_,
+        map(lambda d: _str_to_disposition_map[d], raw_disps.split(",")),
+        Disposition.NONE,
+    )
 
 
-def int_or_none(value: str) -> int | None:
-    return int(value) if value else None
+class Config(BaseSettings):
+    model_config = SettingsConfigDict(env_file=env_files)
+
+    debug: bool
+    found_offers_file: Path
+    refresh_interval_daytime_minutes: int
+    refresh_interval_nighttime_minutes: int
+    dispositions: Annotated[Disposition, BeforeValidator(dispositions_converter)]
+    embed_batch_size: int = 10
+    min_price: int | None = None
+    max_price: int | None = None
+    image_deduplication_threshold: int = 5
+
+    discord_token: str = environ.var()
+    discord_offers_channel: int = environ.var(converter=int)
+    discord_dev_channel: int = environ.var(converter=int)
 
 
-@environ.config(prefix="")
-class Config:
-    debug: bool = environ.bool_var()
-    found_offers_file: Path = environ.var(converter=Path)
-    refresh_interval_daytime_minutes: int = environ.var(converter=int)
-    refresh_interval_nighttime_minutes: int = environ.var(converter=int)
-    dispositions: Disposition = environ.var(converter=dispositions_converter)
-    embed_batch_size: int = environ.var(converter=int, default=10)
-    min_price: int | None = environ.var(converter=int_or_none, default=None)
-    max_price: int | None = environ.var(converter=int_or_none, default=None)
-    image_deduplication_threshold: int = environ.var(converter=int, default=5)
-
-    @environ.config()
-    class Discord:
-        token = environ.var()
-        offers_channel = environ.var(converter=int)
-        dev_channel = environ.var(converter=int)
-
-    discord: Discord = environ.group(Discord)
-
-config: Config = Config.from_environ()
+config = Config()

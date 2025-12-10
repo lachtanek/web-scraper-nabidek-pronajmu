@@ -1,24 +1,25 @@
-""" Scraper for BezRealitky.cz
+"""Scraper for BezRealitky.cz
 author: Mark Barzali
 """
 
 import json
 from abc import ABC as abstract
+from pathlib import Path
+from posixpath import dirname
 from typing import ClassVar
+
+from aiohttp import ClientSession
 
 from disposition import Disposition
 from scrapers.scraper_base import ScraperBase
 from scrapers.rental_offer import RentalOffer
-import requests
 
 
 class ScraperBezrealitky(ScraperBase):
-
     name = "BezRealitky"
     logo_url = "https://www.bezrealitky.cz/manifest-icon-192.maskable.png"
     color = 0x00CC00
     base_url = "https://www.bezrealitky.cz"
-    file: ClassVar[str] = "./graphql/bezrealitky.json"
 
     API: ClassVar[str] = "https://api.bezrealitky.cz/"
     OFFER_TYPE: ClassVar[str] = "PRONAJEM"
@@ -42,36 +43,35 @@ class ScraperBezrealitky(ScraperBase):
         Disposition.FLAT_OTHERS: None,
     }
 
-    def __init__(self, dispositions: Disposition):
-        super().__init__(dispositions)
-        self._read_config()
-        self._patch_config()
+    def _build_query(self) -> dict:
+        file_path = Path(dirname(__file__)) / "../../graphql/bezreality.graphql"
 
-    def _read_config(self) -> None:
-        with open(ScraperBezrealitky.file, "r") as file:
-            self._config = json.load(file)
-
-    def _patch_config(self):
-        match = {
-            "estateType": self.ESTATE_TYPE,
-            "offerType": self.OFFER_TYPE,
-            "disposition": self.get_dispositions_data(),
-            "regionOsmIds": [self.BRNO],
-        }
-        self._config["variables"].update(match)
+        with open(file_path) as query_file:
+            return {
+                "operationName": "AdvertList",
+                "variables": {
+                    "limit": 15,
+                    "offset": 0,
+                    "order": "TIMEORDER_DESC",
+                    "locale": "CS",
+                    "offerType": self.OFFER_TYPE,
+                    "estateType": self.ESTATE_TYPE,
+                    "disposition": self.get_dispositions_data(),
+                    "regionOsmIds": [self.BRNO],
+                },
+                "query": query_file.read(),
+            }
 
     @staticmethod
     def _create_link_to_offer(item: dict) -> str:
         return f"{ScraperBezrealitky.base_url}/{ScraperBezrealitky.Routes.OFFERS}{item}"
 
-    def build_response(self) -> requests.Response:
-        return requests.post(
-            url=f"{ScraperBezrealitky.API}{ScraperBezrealitky.Routes.GRAPHQL}",
-            json=self._config
-        )
-
-    def get_latest_offers(self) -> list[RentalOffer]:
-        response = self.build_response().json()
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
+        async with session.post(
+            f"{ScraperBezrealitky.API}{ScraperBezrealitky.Routes.GRAPHQL}",
+            json=self._build_query(),
+        ) as response:
+            data = await response.json()
 
         return [  # type: list[RentalOffer]
             RentalOffer(
@@ -82,5 +82,5 @@ class ScraperBezrealitky(ScraperBase):
                 price=f"{item['price']} / {item['charges']}",
                 image_url=item["mainImage"]["url"] if item["mainImage"] else "",
             )
-            for item in response["data"]["listAdverts"]["list"]
+            for item in data["data"]["listAdverts"]["list"]
         ]

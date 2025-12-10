@@ -1,8 +1,7 @@
-import logging
 import re
 from urllib.parse import urljoin
 
-import requests
+from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
 from disposition import Disposition
@@ -18,7 +17,7 @@ class ScraperBravis(ScraperBase):
     base_url = "https://www.bravis.cz/pronajem-bytu"
 
 
-    def build_response(self) -> requests.Response:
+    def _get_url(self) -> str:
         url = self.base_url + "?"
 
         if Disposition.FLAT_1KK in self.disposition or Disposition.FLAT_1 in self.disposition:
@@ -33,14 +32,11 @@ class ScraperBravis(ScraperBase):
             url += "typ-nemovitosti-byt+5=&"
 
         url += "typ-nabidky=pronajem-bytu&lokalita=cele-brno&vybavenost=nezalezi&q=&action=search&s=1-20-order-0"
+        return url
 
-        logging.debug("BRAVIS request: %s", url)
-
-        return requests.get(url, headers=self.headers)
-
-    def get_latest_offers(self) -> list[RentalOffer]:
-        response = self.build_response()
-        soup = BeautifulSoup(response.text, 'html.parser')
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
+        async with session.get(self._get_url()) as response:
+            soup = BeautifulSoup(await response.text(), 'html.parser')
 
         items: list[RentalOffer] = []
 

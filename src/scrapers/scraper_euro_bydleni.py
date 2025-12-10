@@ -1,17 +1,12 @@
-import json
-import logging
 import re
 from urllib.parse import urljoin
 
-import requests
+from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
-from scrapers.rental_offer import RentalOffer
-from urllib.parse import urljoin
-from bs4 import BeautifulSoup
 
 
 class ScraperEuroBydleni(ScraperBase):
@@ -36,8 +31,8 @@ class ScraperEuroBydleni(ScraperBase):
     }
 
 
-    def build_response(self) -> requests.Response:
-        request_data = {
+    def _get_data(self) -> dict[str, str]:
+        return {
             "sql[advert_type_eu][]": 7,
             "sql[advert_subtype_eu][]": self.get_dispositions_data(),
             "sql[advert_function_eu][]": 3,
@@ -63,15 +58,9 @@ class ScraperEuroBydleni(ScraperBase):
             "sql[poptavka][telefon]": ""
         }
 
-        logging.debug("EuroBydlení request: %s", json.dumps(request_data))
-
-        response = requests.post(self.base_url, headers=self.headers, cookies=self.cookies, data=request_data)
-        response.encoding = "utf-8"
-        return response
-
-    def get_latest_offers(self) -> list[RentalOffer]:
-        response = self.build_response()
-        soup = BeautifulSoup(response.text, 'html.parser')
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
+        async with session.post(self.base_url, cookies=self.cookies, data=self._get_data()) as response:
+            soup = BeautifulSoup(await response.text(), 'html.parser')
 
         items: list[RentalOffer] = []
 
