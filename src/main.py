@@ -10,10 +10,8 @@ from config import config
 from transformations import deduplicate_offers, filter_offers
 from discord_logger import DiscordLogger
 from offers_storage import OffersStorage
-from scrapers.rental_offer import RentalOffer
 from scrapers_manager import create_scrapers, fetch_latest_offers
 import asyncio
-import locale
 
 
 def get_refresh_interval() -> int:
@@ -23,7 +21,6 @@ def get_refresh_interval() -> int:
         return config.refresh_interval_nighttime_minutes
 
 
-locale.setlocale(locale.LC_ALL, "cs_CZ")
 client = discord.Client(intents=discord.Intents.default())
 interval_time = get_refresh_interval()
 
@@ -79,7 +76,7 @@ async def process_latest_offers():
                     timestamp=datetime.now(tz=timezone.utc),
                     color=offer.scraper.color,
                 )
-                embed.add_field(name="Cena", value=f"{offer.price:n} Kč")
+                embed.add_field(name="Cena", value=f"{offer.price:_} Kč")
                 embed.set_author(
                     name=offer.scraper.name, icon_url=offer.scraper.logo_url
                 )
