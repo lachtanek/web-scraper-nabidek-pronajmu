@@ -76,7 +76,7 @@ async def process_latest_offers():
                     timestamp=datetime.now(tz=timezone.utc),
                     color=offer.scraper.color,
                 )
-                embed.add_field(name="Cena", value=f"{offer.price:_} Kč")
+                embed.add_field(name="Cena", value=f"{offer.price} Kč")
                 embed.set_author(
                     name=offer.scraper.name, icon_url=offer.scraper.logo_url
                 )
