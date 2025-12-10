@@ -1,4 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from scraper_base import ScraperBase
 
 
 @dataclass
@@ -20,5 +24,7 @@ class RentalOffer:
     image_url: str
     """Náhledový obrázek nabídky"""
 
-    scraper: 'ScraperBase'
+    scraper: "ScraperBase"
     """Odkaz na instanci srapera, ze kterého tato nabídka pochází"""
+
+    duplicate_offers: list["RentalOffer"] = field(default_factory=list)

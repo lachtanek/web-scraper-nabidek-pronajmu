@@ -33,6 +33,10 @@ def dispositions_converter(raw_disps: str):
     return functools.reduce(operator.or_, map(lambda d: _str_to_disposition_map[d], raw_disps.split(",")), Disposition.NONE)
 
 
+def int_or_none(value: str) -> int | None:
+    return int(value) if value else None
+
+
 @environ.config(prefix="")
 class Config:
     debug: bool = environ.bool_var()
@@ -41,6 +45,9 @@ class Config:
     refresh_interval_nighttime_minutes: int = environ.var(converter=int)
     dispositions: Disposition = environ.var(converter=dispositions_converter)
     embed_batch_size: int = environ.var(converter=int, default=10)
+    min_price: int | None = environ.var(converter=int_or_none, default=None)
+    max_price: int | None = environ.var(converter=int_or_none, default=None)
+    image_deduplication_threshold: int = environ.var(converter=int, default=5)
 
     @environ.config()
     class Discord:
