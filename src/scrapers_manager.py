@@ -25,7 +25,7 @@ def create_scrapers(dispositions: Disposition) -> list[ScraperBase]:
         ScraperEuroBydleni(dispositions),
         ScraperIdnesReality(dispositions),
         ScraperRealcity(dispositions),
-        # ScraperRealingo(dispositions),
+        ScraperRealingo(dispositions),
         ScraperRemax(dispositions),
         ScraperSreality(dispositions),
         ScraperUlovDomov(dispositions),
@@ -37,7 +37,9 @@ async def _fetch_offers(
     session: ClientSession, scraper: ScraperBase
 ) -> list[RentalOffer]:
     try:
-        return await scraper.get_latest_offers(session)
+        data = await scraper.get_latest_offers(session)
+        logging.info(f"Fetched {len(data)} offers from {scraper.name}")
+        return data
     except Exception:
         logging.error(traceback.format_exc())
 

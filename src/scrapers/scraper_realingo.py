@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 
 from aiohttp import ClientSession
 
+from config import config
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
@@ -30,9 +31,8 @@ class ScraperRealingo(ScraperBase):
         Disposition.FLAT_OTHERS: "OTHERS_FLAT",
     }
 
-
     def _build_query(self) -> dict[str, Any]:
-        file_path = Path(dirname(__file__)) / "../../graphql/bezreality.graphql"
+        file_path = Path(dirname(__file__)) / "../../graphql/realingo.graphql"
 
         with open(file_path) as query_file:
             return {
@@ -46,7 +46,11 @@ class ScraperRealingo(ScraperBase):
                     "categories": self.get_dispositions_data(),
                     "sort": "NEWEST",
                     "first": 300,
-                    "skip": 0
+                    "skip": 0,
+                    "price": {
+                        "from": config.min_price,
+                        "to": config.max_price,
+                    }
                 }
             }
 

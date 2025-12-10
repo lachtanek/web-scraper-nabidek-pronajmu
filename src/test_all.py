@@ -12,6 +12,8 @@ scrapers = create_scrapers(config.dispositions)
 
 async def test_fetch_all_offers():
     logging.info("Fetching offers")
+    config.min_price = 10000
+    config.max_price = 20000
 
     try:
         all_offers = await fetch_latest_offers(scrapers)

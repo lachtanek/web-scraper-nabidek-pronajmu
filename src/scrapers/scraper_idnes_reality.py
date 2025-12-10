@@ -3,6 +3,7 @@ import re
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
+from config import config
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
@@ -31,11 +32,21 @@ class ScraperIdnesReality(ScraperBase):
         Disposition.FLAT_OTHERS: "s-qc%5BsubtypeFlat%5D%5B%5D=atypical", # atyp
     }
 
-    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
-        url = "https://reality.idnes.cz/s/pronajem/byty/brno-mesto/?"
-        url += "&".join(self.get_dispositions_data())
+    def _get_url(self) -> str:
+        url = "https://reality.idnes.cz/s/pronajem/byty"
 
-        async with session.get(url) as response:
+        if config.min_price and config.max_price:
+            url += f"/nad-{config.min_price}-do-{config.max_price}-za-mesic"
+        elif config.min_price:
+            url += f"/nad-{config.min_price}-za-mesic"
+        elif config.max_price:
+            url += f"/do-{config.max_price}-za-mesic"
+
+        url += "/brno-mesto/?" + "&".join(self.get_dispositions_data())
+        return url
+
+    async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
+        async with session.get(self._get_url()) as response:
             soup = BeautifulSoup(await response.text(), 'html.parser')
 
         items: list[RentalOffer] = []

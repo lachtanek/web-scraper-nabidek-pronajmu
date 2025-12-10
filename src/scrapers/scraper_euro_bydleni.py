@@ -4,13 +4,13 @@ from urllib.parse import urljoin
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
+from config import config
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
 
 
 class ScraperEuroBydleni(ScraperBase):
-
     name = "Eurobydlení"
     logo_url = "https://files.janchaloupka.cz/eurobydleni.png"
     color = 0xFA0F54
@@ -26,18 +26,17 @@ class ScraperEuroBydleni(ScraperBase):
         Disposition.FLAT_3KK: 20,
         Disposition.FLAT_4: 21,
         Disposition.FLAT_4KK: 22,
-        Disposition.FLAT_5_UP: (202, 256), # (5+1, 5kk)
-        Disposition.FLAT_OTHERS: (14, 857), # (Garsonka, Apartman)
+        Disposition.FLAT_5_UP: (202, 256),  # (5+1, 5kk)
+        Disposition.FLAT_OTHERS: (14, 857),  # (Garsonka, Apartman)
     }
-
 
     def _get_data(self) -> dict[str, str]:
         return {
             "sql[advert_type_eu][]": 7,
             "sql[advert_subtype_eu][]": self.get_dispositions_data(),
             "sql[advert_function_eu][]": 3,
-            "sql[advert_price_min]": "",
-            "sql[advert_price_max]": "",
+            "sql[advert_price_min]": str(config.min_price) or "",
+            "sql[advert_price_max]": str(config.max_price) or "",
             "sql[usable_area_min]": "",
             "sql[usable_area_max]": "",
             "sql[estate_area_min]": "",
@@ -55,30 +54,35 @@ class ScraperEuroBydleni(ScraperBase):
             "sql[poptavka][jmeno]": "",
             "sql[poptavka][prijmeni]": "",
             "sql[poptavka][email]": "",
-            "sql[poptavka][telefon]": ""
+            "sql[poptavka][telefon]": "",
         }
 
     async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
-        async with session.post(self.base_url, cookies=self.cookies, data=self._get_data()) as response:
-            soup = BeautifulSoup(await response.text(), 'html.parser')
+        async with session.post(
+            self.base_url, cookies=self.cookies, data=self._get_data()
+        ) as response:
+            soup = BeautifulSoup(await response.text(), "html.parser")
 
         items: list[RentalOffer] = []
 
         offers = soup.find(id="properties-box")
         for item in offers.find_all("li", {"class": "list-items__item"}):
-
-            image_container = item.find("ul", {"class": "list-items__item__image__wrap"})
+            image_container = item.find(
+                "ul", {"class": "list-items__item__image__wrap"}
+            )
             content = item.find("div", {"class": "list-items__content__1"})
             title = content.find("h2", {"class": "list-items__item__title"})
             details = content.find_all("li")
 
-            items.append(RentalOffer(
-                scraper = self,
-                link = urljoin(self.base_url, title.find("a").get('href')),
-                title = title.get_text().strip(),
-                location = details[1].get_text().strip(),
-                price = int(re.sub(r"[^\d]", "", details[0].get_text()) or "0"),
-                image_url = "https:" + image_container.find("img").get("src")
-            ))
+            items.append(
+                RentalOffer(
+                    scraper=self,
+                    link=urljoin(self.base_url, title.find("a").get("href")),
+                    title=title.get_text().strip(),
+                    location=details[1].get_text().strip(),
+                    price=int(re.sub(r"[^\d]", "", details[0].get_text()) or "0"),
+                    image_url="https:" + image_container.find("img").get("src"),
+                )
+            )
 
         return items

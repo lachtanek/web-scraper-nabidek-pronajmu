@@ -2,7 +2,6 @@
 author: Mark Barzali
 """
 
-import json
 from abc import ABC as abstract
 from pathlib import Path
 from posixpath import dirname
@@ -10,6 +9,7 @@ from typing import ClassVar
 
 from aiohttp import ClientSession
 
+from config import config
 from disposition import Disposition
 from scrapers.scraper_base import ScraperBase
 from scrapers.rental_offer import RentalOffer
@@ -45,21 +45,27 @@ class ScraperBezrealitky(ScraperBase):
 
     def _build_query(self) -> dict:
         file_path = Path(dirname(__file__)) / "../../graphql/bezreality.graphql"
+        variables = {
+            "limit": 15,
+            "offset": 0,
+            "order": "TIMEORDER_DESC",
+            "locale": "CS",
+            "offerType": self.OFFER_TYPE,
+            "estateType": self.ESTATE_TYPE,
+            "disposition": self.get_dispositions_data(),
+            "regionOsmIds": [self.BRNO],
+        }
+
+        if config.min_price:
+            variables["priceFrom"] = config.min_price
+        if config.max_price:
+            variables["priceTo"] = config.max_price
 
         with open(file_path) as query_file:
             return {
                 "operationName": "AdvertList",
-                "variables": {
-                    "limit": 15,
-                    "offset": 0,
-                    "order": "TIMEORDER_DESC",
-                    "locale": "CS",
-                    "offerType": self.OFFER_TYPE,
-                    "estateType": self.ESTATE_TYPE,
-                    "disposition": self.get_dispositions_data(),
-                    "regionOsmIds": [self.BRNO],
-                },
                 "query": query_file.read(),
+                "variables": variables,
             }
 
     @staticmethod

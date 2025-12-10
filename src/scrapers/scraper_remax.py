@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
+from config import config
 from disposition import Disposition
 from scrapers.rental_offer import RentalOffer
 from scrapers.scraper_base import ScraperBase
@@ -43,6 +44,11 @@ class ScraperRemax(ScraperBase):
         url = self.base_url + "?regions%5B116%5D%5B3702%5D=on&sale=2"
         url += "".join(self.get_dispositions_data())
         url += "&order_by_published_date=0"
+
+        if config.min_price:
+            url += f"&price_from={config.min_price}"
+        if config.max_price:
+            url += f"&price_to={config.max_price}"
 
         async with session.get(url) as response:
             soup = BeautifulSoup(await response.text(), 'html.parser')

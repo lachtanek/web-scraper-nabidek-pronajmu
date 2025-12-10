@@ -103,6 +103,7 @@ class ScraperSreality(ScraperBase):
 
     async def get_latest_offers(self, session: ClientSession) -> list[RentalOffer]:
         url = self.base_url + "/api/cs/v2/estates?category_main_cb=1&category_sub_cb="
+        # TODO: price
         url += "|".join(self.get_dispositions_data())
         url += "&category_type_cb=2&locality_district_id=72&locality_region_id=14&per_page=20"
         url += "&tms=" + str(int(time()))
